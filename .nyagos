@@ -1,0 +1,142 @@
+-- Simple Prompt for CMD.EXE
+share.getTime = function ()
+  return os.date("%Y-%m-%d %H:%M:%S")
+end
+
+set {PROMPT='[$P]['..share.getTime()..']'}
+
+-- code from 'http://lua-users.org/wiki/SplitJoin'
+share.split = function (str, pat)
+    local t = {}
+    local fpat = "(.-)"..pat
+    local last_end = 1
+    local s, e, cap = str:find(fpat, 1)
+    while s do
+        if s ~= 1 or cap ~= "" then
+            table.insert(t,cap)
+        end
+        last_end = e+1
+        s, e, cap = str:find(fpat, last_end)
+    end
+    if last_end <= #str then
+        cap = str:sub(last_end)
+        table.insert(t, cap)
+    end
+    return t
+end
+
+share.gis = function ()
+  local gs = {}
+  local c  = {}
+  c.dc     = "$e[36;40;1m" -- default color
+  c.bc     = "$e[33;1m" -- brunch color
+  c.ok     = "$e[32;1m✔"
+  c.okc    = "$e[32;1m" -- color only
+  c.ng     = "$e[31;1m○"
+  c.ngc    = "$e[31;1m" -- color only
+  gs.gitbool = nyagos.eval('git rev-parse --is-inside-work-tree 2>nul')
+  if gs.gitbool == 'true' then
+    --nyagos.evalは出力をtrimする(?)ので--branch必須
+    gs.gitst = nyagos.eval('git status --porcelain --branch 2>nul')
+    local t = {}
+    t = share.split(gs.gitst, "\n")
+    for i, v in ipairs(t) do
+      if i == 1 then
+        gs.remote = v:match("^##.*")
+        -- local branch name
+        gs.lbn = nyagos.eval("git rev-parse --abbrev-ref HEAD 2>nul")
+        -- ahead or behind
+        if gs.remote then
+          -- remote branch name
+          gs.rbn = gs.remote:match("[^%.]%w*/"..gs.lbn) or c.ng.."/"..gs.lbn
+          gs.bst = gs.remote:match("%[.*%]")
+          if gs.bst then
+            local ab = gs.bst:gsub("[%[%]]", "")
+            ab = share.split(ab, ",")
+            for i, v in ipairs(ab) do
+              local oltab = share.split(v," ")
+              local lastlng = oltab[2] == "1" and " commit." or " commits."
+              if oltab[1] == "ahead" then
+                -- ahead
+                gs.ahead = c.ngc..oltab[1].." "..c.ngc..oltab[2]..lastlng
+                gs.push = c.ng
+              elseif oltab[1] == "behind" then
+                -- behind
+                gs.behind = c.ngc..oltab[1].." "..c.ngc..oltab[2]..lastlng
+                gs.pull = c.ng
+              end
+              gs.ahead = gs.ahead or ""
+              gs.behind = gs.behind or ""
+              gs.synced = gs.synced or ""
+            end
+          else
+            gs.ahead = gs.ahead or ""
+            gs.behind = gs.behind or ""
+            if gs.rbn == c.ng.."/"..gs.lbn then
+              gs.synced =  c.ng.."Not Yet Add Remote Repository!"
+              gs.push = gs.push or c.bc.."-"
+              gs.pull = gs.pull or c.bc.."-"
+            else
+              gs.synced = c.ok.."All Synced!"
+              gs.push = gs.push or c.ok
+              gs.pull = gs.pull or c.ok
+            end
+          end
+        end
+      else
+        -- untrackcheck
+        if gs.add ~= c.ng then
+          gs.add = v:match("^%?%?") and c.ng or c.ok
+        end
+        -- modifycheck
+        if gs.mod ~= c.ng then
+          gs.mod = v:match("M%s[^%s]") and c.ng or c.ok
+        end
+        -- commitcheck
+        if gs.commit ~= c.ng then
+          gs.commit = v:match("[AM]%s%s") and c.ng or c.ok
+        end
+      end
+    end
+    gs.add = gs.add or c.ok
+    gs.mod = gs.mod or c.ok
+    gs.commit = gs.commit or c.ok
+    gs.push = gs.push or c.ok
+    gs.pull = gs.pull or c.ok
+    gs.result = c.dc.."$_(Untrack:"..gs.add..c.dc.." Modify:"..gs.mod..c.dc.." Commit:"..gs.commit..c.dc.." Push:"..gs.push..c.dc.." Pull:"..gs.pull..c.dc..c.dc.." Branch:("..c.bc..gs.rbn..c.dc..")["..gs.ahead..gs.behind..gs.synced..c.dc.."]"..c.dc..")"
+  end
+  return gs.result
+end
+
+-- Coloring Prompt for NYAGOS.exe
+share.prompter = nyagos.prompt
+nyagos.prompt = function(this)
+    this = '[$P]['..share.getTime()..']'
+    if share.gis() then
+      branch = '$e[36;40;1m'..this..share.gis()..'$_$e[31;1m$$$s'..'$e[37;1m'
+    else
+      branch = '$e[36;40;1m'..this..'$_$e[31;1m$$$s'..'$e[37;1m'
+    end
+    return share.prompter(branch)
+end
+
+function sshagent()
+  AGENT = {}
+  SSH_AGENT = nyagos.eval("tasklist /fi 'imagename eq ssh-agent.exe' 2>NUL | findstr ssh-agent 2>NUL")
+  if SSH_AGENT == "" then
+    c = nyagos.eval("ssh-agent")
+    c = share.split(c, ";")
+    AGENT.SSH_AUTH_SOCK_VAL = share.split(c[1], "=")[2]
+    AGENT.SSH_AGENT_PID_VAL = share.split(c[3], "=")[2]
+    set {SSH_AUTH_SOCK=AGENT.SSH_AUTH_SOCK_VAL, SSH_AGENT_PID=AGENT.SSH_AGENT_PID_VAL}
+    nyagos.eval('setx SSH_AUTH_SOCK "'..AGENT.SSH_AUTH_SOCK_VAL..'"')
+    nyagos.eval('setx SSH_AGENT_PID "'..AGENT.SSH_AGENT_PID_VAL..'"')
+    nyagos.eval('ssh-add "~/.ssh/github-BigWestGang_ecdsa"')
+  end
+end
+sshagent()
+
+nyagos.alias.git = "hub"
+nyagos.alias.pip = "pip3"
+
+-- vim:set ft=lua: --
