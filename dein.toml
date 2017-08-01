@@ -1,0 +1,106 @@
+[[plugins]]
+repo='Shougo/dein.vim'
+
+[[plugins]]
+repo='Shougo/vimproc.vim'
+build='make -f make_cygwin.mak'
+
+[[plugins]]
+repo='vim-airline/vim-airline'
+
+[[plugins]]
+repo='vim-airline/vim-airline-themes'
+depends = 'vim-airline'
+hook_add = '''
+" Vim Airline Setting
+syntax enable
+let g:airline_powerline_fonts=1
+set laststatus=2
+let g:airline_theme='zenburn'
+let g:airline#extensions#tabline#enabled = 1
+'''
+
+[[plugins]]
+repo='Shougo/unite.vim'
+
+[[plugins]]
+repo='Shougo/vimfiler'
+hook_add = '''
+nnoremap <silent><NUL> :VimFiler -buffer-name=explorer -split -winwidth=45 -toggle -no-quit<Cr>
+autocmd! vimrc FileType vimfiler call s:vimfilerSetting()
+
+function! s:vimfilerSetting()
+  nmap <buffer><expr><Cr> vimfiler#smart_cursor_map("\<Plug>(vimfiler_expand_tree)", "\<Plug>(vimfiler_edit_file)")
+  nnoremap <buffer>s :call vimfiler#mappings#do_action('mySplit')<Cr>
+  nnoremap <buffer>v :call vimfiler#mappings#do_action('myVsplit')<Cr>
+endfunction
+
+let s:vimfilerAction = {'is_selectable': 1}
+function! s:vimfilerAction.func(candidates)
+  wincmd p
+  exec 'split '.a:candidates[0].action__path
+endfunction
+call unite#custom_action('file', 'mySplit', s:vimfilerAction)
+
+let s:vimfilerAction = {'is_selectable': 1}
+function! s:vimfilerAction.func(candidates)
+  wincmd p
+  exec 'vsplit '.a:candidates[0].action__path
+endfunction
+call unite#custom_action('file', 'myVsplit', s:vimfilerAction)
+'''
+
+[[plugins]]
+repo='Shougo/neomru.vim'
+
+[[plugins]]
+repo = 'cespare/vim-toml'
+on_ft = 'toml'
+
+[[plugins]]
+repo='Shougo/neocomplete.vim'
+
+[[plugins]]
+repo='Shougo/neco-vim'
+
+[[plugins]]
+repo='Shougo/vimshell'
+
+[[plugins]]
+repo='digitaltoad/vim-pug'
+
+[[plugins]]
+repo='vim-scripts/vim-stylus'
+
+[[plugins]]
+repo='elzr/vim-json'
+
+[[plugins]]
+repo='othree/yajs.vim'
+
+[[plugins]]
+repo='mxw/vim-jsx'
+hook_add = '''
+" syntax jsx
+let g:jsx_ext_required = 0
+'''
+
+[[plugins]]
+repo='Dkendal/fzy-vim'
+hook_add = '''
+function! FzyCommand(choice_command, vim_command)
+  try
+    let output = system(a:choice_command . " | fzy ")
+  catch /Vim:Interrupt/
+    " redraw!が有効になるように、^Cのエラーを受け取ってここで捨てる
+  endtry
+  redraw!
+  if v:shell_error == 0 && !empty(output)
+    exec a:vim_command.' '.output
+  endif
+endfunction
+
+nnoremap <leader>e :call FzyCommand('find -type f', ':e')<CR>
+nnoremap <leader>v :call FzyCommand('find -type f', ':vs')<CR>
+nnoremap <leader>s :call FzyCommand('find -type f', ':sp')<CR>
+'''
