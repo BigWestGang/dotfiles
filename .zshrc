@@ -59,3 +59,5 @@ function() {
   PROMPT=${current}${clock}${clock2}${clock3}'$(git_super_status)
 '${line}
 }
+
+alias git='hub'
