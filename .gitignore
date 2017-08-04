@@ -15,4 +15,11 @@
 cache.ets
 .python_history
 .bash_history
+.bash_logout
+.bash_profile
+.bashrc
+.inputrc
+.profile
+/MSYS2-packages
+/lua-5.3.3
 .viminfo
